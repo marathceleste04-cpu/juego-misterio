@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Misterio en la Mansión Sterling</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #090d16;
+            color: #e2e8f0;
+            user-select: none;
+        }
+        .font-cinzel {
+            font-family: 'Cinzel', serif;
+        }
+        /* Visual Viewport Gradient & Glows */
+        .room-viewport {
+            background: radial-gradient(circle at center, #1e293b 0%, #0f172a 70%, #020617 100%);
+            box-shadow: inset 0 0 100px rgba(0,0,0,0.8);
+        }
+        .interactive-object {
+            transition: all 0.25s ease;
+            cursor: pointer;
+        }
+        .interactive-object:hover {
+            filter: drop-shadow(0 0 12px rgba(251, 191, 36, 0.6));
+            transform: translateY(-2px) scale(1.02);
+        }
+        .glow-gold {
+            box-shadow: 0 0 20px rgba(245, 158, 11, 0.25);
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 3px;
+        }
+        /* Keypad Styling */
+        .keypad-btn {
+            background: linear-gradient(145deg, #1e293b, #0f172a);
+            box-shadow: 2px 2px 5px #050811, -1px -1px 3px #2d3d54;
+            transition: all 0.15s ease;
+        }
+        .keypad-btn:active {
+            background: #0f172a;
+            box-shadow: inset 2px 2px 5px #050811;
+            transform: scale(0.96);
+        }
+    </style>
+</head>
+<body class="h-screen w-screen overflow-hidden flex flex-col justify-between">
+
+    <!-- Encabezado / Barra Superior -->
+    <header class="bg-slate-900/95 border-b border-amber-900/40 px-6 py-3 flex justify-between items-center z-10 backdrop-blur-md">
+        <div class="flex items-center space-x-3">
+            <i data-lucide="key-round" class="text-amber-500 w-6 h-6"></i>
+            <h1 class="text-xl font-bold tracking-wider text-amber-100 font-cinzel">EL MISTERIO DE LA MANSIÓN STERLING</h1>
+        </div>
+        <div class="flex items-center space-x-3">
+            <!-- Botón para Compartir Enlace Directo -->
+            <button onclick="shareGameLink()" class="text-xs bg-amber-600/20 hover:bg-amber-600/40 text-amber-300 border border-amber-500/50 px-3 py-2 rounded-lg transition flex items-center gap-1.5 font-medium">
+                <i data-lucide="share-2" class="w-4 h-4"></i> Compartir Enlace
+            </button>
+            <button id="sound-btn" onclick="toggleAudio()" class="text-slate-400 hover:text-amber-400 transition p-2 rounded-lg bg-slate-800/80 border border-slate-700">
+                <i data-lucide="volume-2" id="sound-icon" class="w-5 h-5"></i>
+            </button>
+            <button onclick="showResetModal()" class="text-xs bg-red-950/60 hover:bg-red-900/80 text-red-200 border border-red-800/50 px-3 py-2 rounded-lg transition flex items-center gap-1">
+                <i data-lucide="rotate-ccw" class="w-4 h-4"></i> Reiniciar
+            </button>
+        </div>
+    </header>
+
+    <!-- Espacio Principal de Juego -->
+    <main class="flex-1 flex flex-col md:flex-row p-4 gap-4 overflow-hidden relative">
+        
+        <!-- Vista Principal de la Habitación -->
+        <section class="flex-1 relative rounded-2xl border-2 border-slate-800/80 room-viewport overflow-hidden flex flex-col justify-between p-6">
+            
+            <!-- Info y Selector de Habitación -->
+            <div class="flex flex-col sm:flex-row justify-between items-start gap-4 z-10">
+                <div class="bg-slate-950/85 backdrop-blur-md border border-amber-900/50 p-4 rounded-xl max-w-md glow-gold">
+                    <span id="room-tag" class="text-xs font-semibold uppercase tracking-widest text-amber-500">Ubicación</span>
+                    <h2 id="room-title" class="text-2xl font-bold text-slate-100 font-cinzel">Cargando...</h2>
+                    <p id="room-desc" class="text-sm text-slate-300 mt-1 leading-relaxed">...</p>
+                </div>
+
+                <!-- Barra de Navegación de Habitaciones -->
+                <div id="room-nav" class="flex flex-wrap gap-2 bg-slate-950/85 p-2 rounded-xl border border-slate-800">
+                    <!-- Se genera dinámicamente -->
+                </div>
+            </div>
+
+            <!-- Escenario de Objetos Interactivos -->
+            <div id="interactive-stage" class="absolute inset-0 flex items-center justify-center p-8 pointer-events-none">
+                <!-- Se inyectan hotspots dinámicamente -->
+            </div>
+
+            <!-- Notificación de Estado -->
+            <div class="z-10 flex justify-center">
+                <div id="status-message" class="bg-slate-950/90 text-amber-200 text-sm px-6 py-2 rounded-full border border-amber-500/30 backdrop-blur-sm shadow-lg flex items-center gap-2 transition-all opacity-0">
+                    <i data-lucide="info" class="w-4 h-4 text-amber-400"></i>
+                    <span id="status-text">Notificación</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Panel Lateral: Inventario y Cuaderno -->
+        <aside class="w-full md:w-80 flex flex-col gap-4">
+            
+            <!-- Inventario -->
+            <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 flex-1 flex flex-col shadow-xl backdrop-blur-md">
+                <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+                    <h3 class="font-cinzel text-md font-bold text-amber-400 flex items-center gap-2">
+                        <i data-lucide="briefcase" class="w-4 h-4"></i> Inventario
+                    </h3>
+                    <span id="inventory-count" class="text-xs bg-slate-800 px-2 py-0.5 rounded-full text-slate-400">0 Objetos</span>
+                </div>
+                <p class="text-xs text-slate-500 my-2">Haz clic en un objeto recolectado para examinarlo.</p>
+                
+                <div id="inventory-grid" class="grid grid-cols-3 gap-3 mt-1 flex-1 overflow-y-auto pr-1">
+                    <!-- Las casillas de inventario se llenan dinámicamente -->
+                </div>
+            </div>
+
+            <!-- Cuaderno de Pistas -->
+            <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 h-52 flex flex-col shadow-xl backdrop-blur-md">
+                <h3 class="font-cinzel text-md font-bold text-amber-400 flex items-center gap-2 pb-2 border-b border-slate-800">
+                    <i data-lucide="book-open" class="w-4 h-4"></i> Diario de Pistas
+                </h3>
+                <div id="notebook-list" class="flex-1 overflow-y-auto text-xs space-y-2 mt-2 pr-1 text-slate-300">
+                    <p class="text-slate-500 italic">No has registrado hallazgos aún...</p>
+                </div>
+            </div>
+        </aside>
+    </main>
+
+    <!-- Modal de Inspección y Teclado -->
+    <div id="inspector-modal" class="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 border-2 border-amber-900/60 rounded-2xl max-w-lg w-full p-6 shadow-2xl relative flex flex-col items-center">
+            
+            <!-- Botón Cerrar -->
+            <button onclick="closeInspector()" class="absolute top-4 right-4 text-slate-400 hover:text-white bg-slate-800 p-1.5 rounded-full border border-slate-700">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+
+            <!-- Título Modal -->
+            <h3 id="modal-title" class="text-xl font-bold font-cinzel text-amber-400 mb-2 text-center">Inspección</h3>
+            
+            <!-- Contenido Dinámico -->
+            <div id="modal-content" class="w-full my-4 flex flex-col items-center">
+                <!-- Se inyecta con JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Victoria Final -->
+    <div id="win-modal" class="fixed inset-0 bg-slate-950/95 z-50 hidden flex flex-col items-center justify-center p-6 text-center">
+        <div class="max-w-md bg-slate-900 border-2 border-amber-500 p-8 rounded-2xl shadow-2xl glow-gold flex flex-col items-center">
+            <div class="w-16 h-16 bg-amber-500/20 text-amber-400 rounded-full flex items-center justify-center mb-4 border border-amber-500/40">
+                <i data-lucide="trophy" class="w-10 h-10"></i>
+            </div>
+            <h2 class="text-3xl font-cinzel font-bold text-amber-300 mb-2">¡Escape Exitoso!</h2>
+            <p class="text-slate-300 text-sm mb-6 leading-relaxed">
+                Has ingresado la combinación correcta (9154) en el panel de la Puerta Principal. La cerradura electromagnética se desactiva y logras salir de la mansión con las pruebas intactas. ¡Caso Resuelto!
+            </p>
+            <div class="flex gap-3">
+                <button onclick="shareGameLink()" class="bg-slate-800 hover:bg-slate-700 text-amber-400 border border-amber-500/40 font-semibold px-4 py-3 rounded-xl transition flex items-center gap-2 text-sm">
+                    <i data-lucide="share-2" class="w-4 h-4"></i> Compartir
+                </button>
+                <button onclick="resetGame()" class="bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold px-6 py-3 rounded-xl transition flex items-center gap-2 text-sm">
+                    <i data-lucide="rotate-ccw" class="w-4 h-4"></i> Jugar de nuevo
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lógica del Juego en JavaScript -->
+    <script>
+        // --- SINTETIZADOR DE AUDIO (Web Audio API) ---
+        let audioCtx = null;
+        let soundEnabled = true;
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+
+        function playSound(type) {
+            if (!soundEnabled) return;
+            initAudio();
+            if (!audioCtx) return;
+
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            const now = audioCtx.currentTime;
+
+            if (type === 'click') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(600, now);
+                osc.frequency.exponentialRampToValueAtTime(200, now + 0.05);
+                gain.gain.setValueAtTime(0.15, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.05);
+                osc.start(now);
+                osc.stop(now + 0.05);
+            } else if (type === 'unlock') {
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(440, now);
+                osc.frequency.setValueAtTime(880, now + 0.12);
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.25);
+                osc.start(now);
+                osc.stop(now + 0.25);
+            } else if (type === 'error') {
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(160, now);
+                osc.frequency.setValueAtTime(110, now + 0.1);
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.2);
+                osc.start(now);
+                osc.stop(now + 0.2);
+            } else if (type === 'pickup') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(523.25, now);
+                osc.frequency.setValueAtTime(659.25, now + 0.08);
+                gain.gain.setValueAtTime(0.15, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.2);
+                osc.start(now);
+                osc.stop(now + 0.2);
+            }
+        }
+
+        function toggleAudio() {
+            soundEnabled = !soundEnabled;
+            const icon = document.getElementById('sound-icon');
+            if (soundEnabled) {
+                icon.setAttribute('data-lucide', 'volume-2');
+            } else {
+                icon.setAttribute('data-lucide', 'volume-x');
+            }
+            lucide.createIcons();
+            showMessage(soundEnabled ? "Sonido activado" : "Sonido desactivado");
+        }
+
+        // --- ESTADO DEL JUEGO ---
+        const gameState = {
+            currentRoom: 'hall',
+            inventory: [],
+            notes: [],
+            unlocked: {
+                safeDesk: false,      // Clave: 1842
+                labCabinet: false,    // Requiere Llave de Plata
+                exitDoor: false       // Clave Final: 9154
+            },
+            keypadInput: ''
+        };
+
+        // --- DEFINICIÓN DE HABITACIONES Y ACERTARAIS ---
+        const rooms = {
+            hall: {
+                id: 'hall',
+                name: 'Recibidor Principal',
+                tag: 'Planta Baja',
+                desc: 'Un vestíbulo silencioso con iluminación tenue. En la pared destaca un cuadro antiguo al óleo.',
+                connections: ['study', 'exit'],
+                objects: [
+                    {
+                        id: 'painting',
+                        name: 'Cuadro Antiguo',
+                        icon: 'image',
+                        desc: 'Un retrato al óleo del fundador de la mansión. En la base del marco hay un grabado sutil.',
+                        action: () => inspectPainting()
+                    }
+                ]
+            },
+            study: {
+                id: 'study',
+                name: 'Despacho del Archivero',
+                tag: 'Ala Oeste',
+                desc: 'Un despacho repleto de documentos. Hay una caja fuerte metálica pesada en un rincón.',
+                connections: ['hall', 'lab'],
+                objects: [
+                    {
+                        id: 'desk_safe',
+                        name: 'Caja Fuerte del Despacho',
+                        icon: 'lock',
+                        desc: 'Una caja fuerte blindada con teclado numérico de 4 dígitos.',
+                        action: () => openKeypad('safeDesk', '1842', 'Caja Fuerte del Despacho', 'silver_key', 'key', 'Llave de Plata')
+                    }
+                ]
+            },
+            lab: {
+                id: 'lab',
+                name: 'Laboratorio de Reactivos',
+                tag: 'Sótano',
+                desc: 'Misas con tubos de ensayo y reactivos. Hay un mueble metálico reforzado.',
+                connections: ['study'],
+                objects: [
+                    {
+                        id: 'chemical_cabinet',
+                        name: 'Mueble de Reactivos',
+                        icon: 'flask-conical',
+                        desc: 'Está cerrado con un candado que requiere la Llave de Plata.',
+                        action: () => inspectChemicalCabinet()
+                    }
+                ]
+            },
+            exit: {
+                id: 'exit',
+                name: 'Salida Principal',
+                tag: 'Vestíbulo Este',
+                desc: 'La gran puerta hacia el exterior. Está bloqueada con un panel de acceso electrónico de 4 dígitos.',
+                connections: ['hall'],
+                objects: [
+                    {
+                        id: 'final_keypad',
+                        name: 'Panel de Seguridad Final',
+                        icon: 'shield-alert',
+                        desc: 'Panel de control de la puerta. Pide una clave de 4 dígitos.',
+                        action: () => openKeypad('exitDoor', '9154', 'Control de Salida', null, null, null, triggerWin)
+                    }
+                ]
+            }
+        };
+
+        // --- RENDERIZADO DEL ENTORNO ---
+        function renderRoom() {
+            const room = rooms[gameState.currentRoom];
+            
+            document.getElementById('room-tag').innerText = room.tag;
+            document.getElementById('room-title').innerText = room.name;
+            document.getElementById('room-desc').innerText = room.desc;
+
+            // Navegación
+            const navContainer = document.getElementById('room-nav');
+            navContainer.innerHTML = '';
+            
+            room.connections.forEach(targetId => {
+                const targetRoom = rooms[targetId];
+                const btn = document.createElement('button');
+                btn.className = "flex items-center gap-1.5 px-3 py-1.5 text-xs bg-slate-800 hover:bg-amber-600 hover:text-slate-950 text-slate-200 font-semibold rounded-lg transition border border-slate-700 shadow";
+                btn.innerHTML = `<i data-lucide="arrow-right-left" class="w-3.5 h-3.5"></i> Ir a ${targetRoom.name}`;
+                btn.onclick = () => changeRoom(targetId);
+                navContainer.appendChild(btn);
+            });
+
+            // Hotspots / Objetos en la habitación
+            const stage = document.getElementById('interactive-stage');
+            stage.innerHTML = '';
+
+            const objGrid = document.createElement('div');
+            objGrid.className = "pointer-events-auto grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-lg w-full";
+
+            room.objects.forEach(obj => {
+                const card = document.createElement('div');
+                card.className = "interactive-object bg-slate-900/90 border border-amber-900/40 p-4 rounded-xl flex items-center gap-3 shadow-lg hover:border-amber-500/80";
+                card.onclick = () => {
+                    playSound('click');
+                    obj.action();
+                };
+
+                card.innerHTML = `
+                    <div class="p-3 bg-slate-800 rounded-lg text-amber-400 border border-slate-700">
+                        <i data-lucide="${obj.icon}" class="w-6 h-6"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-sm text-slate-200 font-cinzel">${obj.name}</h4>
+                        <p class="text-xs text-slate-400">Inspeccionar</p>
+                    </div>
+                `;
+                objGrid.appendChild(card);
+            });
+
+            stage.appendChild(objGrid);
+            lucide.createIcons();
+        }
+
+        function changeRoom(roomId) {
+            playSound('click');
+            gameState.currentRoom = roomId;
+            renderRoom();
+        }
+
+        // --- SISTEMA DE INVENTARIO Y DIARIO ---
+        function addItem(id, name, icon, desc) {
+            if (gameState.inventory.some(item => item.id === id)) return;
+            
+            gameState.inventory.push({ id, name, icon, desc });
+            playSound('pickup');
+            showMessage(`Objeto obtenido: ${name}`);
+            renderInventory();
+        }
+
+        function renderInventory() {
+            const grid = document.getElementById('inventory-grid');
+            const count = document.getElementById('inventory-count');
+            grid.innerHTML = '';
+            
+            count.innerText = `${gameState.inventory.length} Objeto(s)`;
+
+            for (let i = 0; i < 6; i++) {
+                const item = gameState.inventory[i];
+                const slot = document.createElement('div');
+                
+                if (item) {
+                    slot.className = "bg-slate-800/90 border border-amber-500/40 rounded-xl p-2 flex flex-col items-center justify-center cursor-pointer hover:border-amber-400 transition glow-gold aspect-square";
+                    slot.innerHTML = `
+                        <i data-lucide="${item.icon}" class="w-6 h-6 text-amber-400 mb-1"></i>
+                        <span class="text-[10px] text-center text-slate-200 font-medium truncate w-full">${item.name}</span>
+                    `;
+                    slot.onclick = () => {
+                        playSound('click');
+                        openInspectorModal(item.name, `<p class="text-slate-300 text-sm text-center">${item.desc}</p>`);
+                    };
+                } else {
+                    slot.className = "bg-slate-950/40 border border-slate-800/80 rounded-xl aspect-square flex items-center justify-center text-slate-700";
+                    slot.innerHTML = `<i data-lucide="minus" class="w-4 h-4"></i>`;
+                }
+                grid.appendChild(slot);
+            }
+            lucide.createIcons();
+        }
+
+        function addNote(title, text) {
+            if (gameState.notes.some(n => n.title === title)) return;
+            gameState.notes.push({ title, text });
+            renderNotebook();
+        }
+
+        function renderNotebook() {
+            const container = document.getElementById('notebook-list');
+            if (gameState.notes.length === 0) {
+                container.innerHTML = `<p class="text-slate-500 italic">No has registrado hallazgos aún...</p>`;
+                return;
+            }
+
+            container.innerHTML = '';
+            gameState.notes.forEach(note => {
+                const item = document.createElement('div');
+                item.className = "bg-slate-950/60 p-2 rounded-lg border border-slate-800";
+                item.innerHTML = `
+                    <div class="font-semibold text-amber-400 text-xs flex items-center gap-1">
+                        <i data-lucide="file-text" class="w-3 h-3"></i> ${note.title}
+                    </div>
+                    <div class="text-slate-300 text-[11px] mt-0.5">${note.text}</div>
+                `;
+                container.appendChild(item);
+            });
+            lucide.createIcons();
+        }
+
+        // --- PISTAS Y ACCIONES DE INTERACCIÓN ---
+        function inspectPainting() {
+            openInspectorModal('Cuadro Antiguo', `
+                <div class="flex flex-col items-center gap-3">
+                    <div class="w-32 h-32 bg-amber-950/40 border-4 border-amber-700 rounded-lg flex items-center justify-center text-amber-500 shadow-inner">
+                        <i data-lucide="user" class="w-16 h-16"></i>
+                    </div>
+                    <p class="text-sm text-slate-300 text-center">Un retrato al óleo sobre el lienzo. En la placa dorada inferior lees la fecha grabada: <strong class="text-amber-400 font-mono text-base">1842</strong>.</p>
+                </div>
+            `);
+            addNote('Año del Retrato', 'Grabado en el cuadro del recibidor: 1842.');
+        }
+
+        function inspectChemicalCabinet() {
+            const hasKey = gameState.inventory.some(i => i.id === 'silver_key');
+
+            if (gameState.unlocked.labCabinet) {
+                showChemicalHintModal();
+                return;
+            }
+
+            if (hasKey) {
+                gameState.unlocked.labCabinet = true;
+                playSound('unlock');
+                showChemicalHintModal();
+            } else {
+                playSound('error');
+                openInspectorModal('Mueble de Reactivos', `
+                    <p class="text-center text-slate-300 text-sm">El mueble está cerrado con candado. Necesitas la <strong class="text-amber-400">Llave de Plata</strong> del despacho para abrirlo.</p>
+                `);
+            }
+        }
+
+        function showChemicalHintModal() {
+            openInspectorModal('Reactivos Químicos', `
+                <div class="text-center space-y-2">
+                    <i data-lucide="flask-conical" class="w-10 h-10 text-amber-400 mx-auto"></i>
+                    <p class="text-sm text-slate-300">En el mueble abierto encuentras una ficha de laboratorio:</p>
+                    <div class="bg-slate-950 border border-amber-500/40 p-3 rounded-lg text-amber-300 font-mono text-sm my-2">
+                        Flúor (F) = 9<br>
+                        Hidrógeno (H) = 1
+                    </div>
+                    <p class="text-xs text-slate-400">Nota manuscrita: "Los primeros dos dígitos del código de salida son F e H (91). Los últimos dos son 5 y 4."</p>
+                </div>
+            `);
+            addNote('Código de Salida', 'Clave completa deducida: Flúor(9) + Hidrógeno(1) + 54 = 9154.');
+        }
+
+        // --- TECLADO NUMÉRICO Y TECLAS ---
+        function openKeypad(stateKey, correctCode, title, rewardItemId, rewardIcon, rewardDesc, onSolveCallback) {
+            if (gameState.unlocked[stateKey]) {
+                openInspectorModal(title, `<p class="text-center text-amber-400 font-semibold">✓ Este mecanismo ya ha sido desbloqueado.</p>`);
+                return;
+            }
+
+            gameState.keypadInput = '';
+            
+            const renderKeypadUI = () => {
+                return `
+                    <div class="flex flex-col items-center w-full max-w-xs">
+                        <div class="w-full bg-slate-950 border-2 border-slate-800 rounded-xl p-3 mb-4 text-center">
+                            <span id="keypad-display" class="font-mono text-2xl tracking-widest text-emerald-400 font-bold min-h-[32px] block">
+                                ${gameState.keypadInput.padEnd(correctCode.length, '_')}
+                            </span>
+                        </div>
+
+                        <div class="grid grid-cols-3 gap-2 w-full">
+                            ${[1,2,3,4,5,6,7,8,9].map(num => `
+                                <button onclick="pressKey('${num}', '${correctCode}')" 
+                                    class="keypad-btn py-3 text-lg font-bold text-slate-200 rounded-xl hover:text-amber-400 transition">
+                                    ${num}
+                                </button>
+                            `).join('')}
+                            <button onclick="clearKeypad('${correctCode.length}')" class="keypad-btn py-3 text-xs font-bold text-red-400 rounded-xl">BORRAR</button>
+                            <button onclick="pressKey('0', '${correctCode}')" class="keypad-btn py-3 text-lg font-bold text-slate-200 rounded-xl">0</button>
+                            <button onclick="submitKeypad('${correctCode}', '${stateKey}', '${rewardItemId}', '${rewardIcon}', '${rewardDesc}', ${onSolveCallback ? onSolveCallback.name : 'null'})" class="keypad-btn py-3 text-xs font-bold text-emerald-400 rounded-xl">ENTER</button>
+                        </div>
+                    </div>
+                `;
+            };
+
+            openInspectorModal(title, renderKeypadUI());
+        }
+
+        function pressKey(val, correctCode) {
+            if (gameState.keypadInput.length < correctCode.length) {
+                playSound('click');
+                gameState.keypadInput += val;
+                updateKeypadDisplay(correctCode.length);
+            }
+        }
+
+        function clearKeypad(codeLength) {
+            playSound('click');
+            gameState.keypadInput = '';
+            updateKeypadDisplay(codeLength);
+        }
+
+        function updateKeypadDisplay(codeLength) {
+            const display = document.getElementById('keypad-display');
+            if (display) {
+                display.innerText = gameState.keypadInput.padEnd(codeLength, '_');
+            }
+        }
+
+        function submitKeypad(correctCode, stateKey, rewardItemId, rewardIcon, rewardDesc, callback) {
+            if (gameState.keypadInput === correctCode) {
+                playSound('unlock');
+                gameState.unlocked[stateKey] = true;
+
+                if (rewardItemId && rewardItemId !== 'null') {
+                    addItem(rewardItemId, rewardDesc, rewardIcon, `Obtenido de la caja fuerte (${correctCode})`);
+                    addNote('Llave de Plata', 'Obtenida en el despacho con la clave 1842.');
+                }
+
+                if (callback && typeof window[callback] === 'function') {
+                    window[callback]();
+                } else if (callback && typeof callback === 'function') {
+                    callback();
+                }
+
+                closeInspector();
+                showMessage("¡Código Correcto!");
+            } else {
+                playSound('error');
+                gameState.keypadInput = '';
+                updateKeypadDisplay(correctCode.length);
+                showMessage("Código incorrecto.");
+            }
+        }
+
+        function triggerWin() {
+            setTimeout(() => {
+                document.getElementById('win-modal').classList.remove('hidden');
+                playSound('unlock');
+            }, 300);
+        }
+
+        // --- COMPARTIR Y MODALES ---
+        function shareGameLink() {
+            playSound('click');
+            const url = window.location.href;
+            
+            if (navigator.share) {
+                navigator.share({
+                    title: 'Misterio en la Mansión Sterling',
+                    text: '¡Juega a este escape room de misterio interactivo gratis en tu navegador!',
+                    url: url
+                }).catch(() => copyToClipboard(url));
+            } else {
+                copyToClipboard(url);
+            }
+        }
+
+        function copyToClipboard(text) {
+            const tempInput = document.createElement("input");
+            tempInput.value = text;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            document.execCommand("copy");
+            document.body.removeChild(tempInput);
+            showMessage("¡Enlace copiado al portapapeles!");
+        }
+
+        function openInspectorModal(title, htmlContent) {
+            document.getElementById('modal-title').innerText = title;
+            document.getElementById('modal-content').innerHTML = htmlContent;
+            document.getElementById('inspector-modal').classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        function closeInspector() {
+            document.getElementById('inspector-modal').classList.add('hidden');
+        }
+
+        function showMessage(text) {
+            const msgBox = document.getElementById('status-message');
+            const msgText = document.getElementById('status-text');
+            msgText.innerText = text;
+            
+            msgBox.classList.remove('opacity-0');
+            msgBox.classList.add('opacity-100');
+
+            setTimeout(() => {
+                msgBox.classList.remove('opacity-100');
+                msgBox.classList.add('opacity-0');
+            }, 2500);
+        }
+
+        function showResetModal() {
+            if (confirm("¿Seguro que deseas reiniciar el progreso del juego?")) {
+                resetGame();
+            }
+        }
+
+        function resetGame() {
+            gameState.currentRoom = 'hall';
+            gameState.inventory = [];
+            gameState.notes = [];
+            gameState.unlocked = {
+                safeDesk: false,
+                labCabinet: false,
+                exitDoor: false
+            };
+
+            document.getElementById('win-modal').classList.add('hidden');
+            renderInventory();
+            renderNotebook();
+            renderRoom();
+            showMessage("Juego reiniciado.");
+        }
+
+        // --- INICIALIZACIÓN ---
+        window.onload = () => {
+            renderRoom();
+            renderInventory();
+            renderNotebook();
+            lucide.createIcons();
+        };
+    </script>
+</body>
+</html>
